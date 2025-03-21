@@ -1,0 +1,23 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "social-media",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rodzelte/social-media.git"
+  },
+  "author": "Rodzel Develops",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rodzelte/social-media/issues"
+  },
+  "homepage": "https://github.com/rodzelte/social-media#readme",
+  "dependencies": {
+    "express": "^4.21.2",
+    "nodemon": "^3.1.9"
+  }
+}
