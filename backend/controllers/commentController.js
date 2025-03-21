@@ -2,30 +2,33 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// @desc    Create new comment
-// @route   POST /api/comments
-// @access  Private
 export const createComment = async (req, res) => {
   try {
     const { content, postId } = req.body;
 
-    if (!content || !postId) {
-      return res.status(400).json({ message: 'Please provide content and postId' });
+    // Check if post exists
+    const post = await prisma.post.findUnique({
+      where: { id: postId }
+    });
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
     }
 
     const comment = await prisma.comment.create({
       data: {
         content,
         postId,
-        authorId: req.user.id,
+        userId: req.user.userId
       },
       include: {
         User: {
           select: {
-            username: true,
-          },
-        },
-      },
+            id: true,
+            username: true
+          }
+        }
+      }
     });
 
     // Update post's commentIds array
@@ -33,131 +36,105 @@ export const createComment = async (req, res) => {
       where: { id: postId },
       data: {
         commentIds: {
-          push: comment.id,
-        },
-      },
+          push: comment.id
+        }
+      }
     });
 
     res.status(201).json(comment);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Error creating comment' });
   }
 };
 
-// @desc    Get comments by post ID
-// @route   GET /api/comments/post/:postId
-// @access  Public
-export const getCommentsByPostId = async (req, res) => {
+export const getPostComments = async (req, res) => {
   try {
     const comments = await prisma.comment.findMany({
-      where: {
-        postId: req.params.postId,
-      },
+      where: { postId: req.params.postId },
       include: {
         User: {
           select: {
-            username: true,
-          },
-        },
+            id: true,
+            username: true
+          }
+        }
       },
       orderBy: {
-        createdAt: 'desc',
-      },
+        createdAt: 'desc'
+      }
     });
 
     res.json(comments);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Error fetching comments' });
   }
 };
 
-// @desc    Update comment
-// @route   PUT /api/comments/:id
-// @access  Private
 export const updateComment = async (req, res) => {
   try {
+    const { content } = req.body;
+
     const comment = await prisma.comment.findUnique({
-      where: {
-        id: req.params.id,
-      },
+      where: { id: req.params.id }
     });
 
     if (!comment) {
       return res.status(404).json({ message: 'Comment not found' });
     }
 
-    // Check if user is authorized to update the comment
-    if (comment.authorId !== req.user.id) {
-      return res.status(401).json({ message: 'User not authorized' });
+    if (comment.userId !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to update this comment' });
     }
 
     const updatedComment = await prisma.comment.update({
-      where: {
-        id: req.params.id,
-      },
-      data: {
-        content: req.body.content,
-      },
+      where: { id: req.params.id },
+      data: { content },
       include: {
         User: {
           select: {
-            username: true,
-          },
-        },
-      },
+            id: true,
+            username: true
+          }
+        }
+      }
     });
 
     res.json(updatedComment);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Error updating comment' });
   }
 };
 
-// @desc    Delete comment
-// @route   DELETE /api/comments/:id
-// @access  Private
 export const deleteComment = async (req, res) => {
   try {
     const comment = await prisma.comment.findUnique({
-      where: {
-        id: req.params.id,
-      },
+      where: { id: req.params.id }
     });
 
     if (!comment) {
       return res.status(404).json({ message: 'Comment not found' });
     }
 
-    // Check if user is authorized to delete the comment
-    if (comment.authorId !== req.user.id) {
-      return res.status(401).json({ message: 'User not authorized' });
+    if (comment.userId !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to delete this comment' });
     }
 
-    // Remove comment ID from post's commentIds array
+    // Remove comment from post's commentIds array
     await prisma.post.update({
       where: { id: comment.postId },
       data: {
         commentIds: {
-          set: prisma.post.findUnique({
-            where: { id: comment.postId },
-            select: { commentIds: true },
-          }).commentIds.filter(id => id !== comment.id),
-        },
-      },
+          set: comment.post.commentIds.filter(id => id !== comment.id)
+        }
+      }
     });
 
     await prisma.comment.delete({
-      where: {
-        id: req.params.id,
-      },
+      where: { id: req.params.id }
     });
 
-    res.json({ message: 'Comment deleted' });
+    res.json({ message: 'Comment deleted successfully' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Error deleting comment' });
   }
 }; 

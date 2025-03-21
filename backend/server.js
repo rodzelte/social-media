@@ -1,32 +1,37 @@
 import express from 'express';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
-import userRoutes from './routes/userRoutes.js';
-import postRoutes from './routes/postRoutes.js';
-import commentRoutes from './routes/commentRoutes.js';
-import messageRoutes from './routes/messageRoutes.js';
+import dotenv from 'dotenv';
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import postRoutes from './routes/posts.js';
+import commentRoutes from './routes/comments.js';
+import messageRoutes from './routes/messages.js';
 
 dotenv.config();
+
 const app = express();
+const prisma = new PrismaClient();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/messages', messageRoutes);
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URL)
-  .then(() => console.log("Connected to MongoDB!"))
-  .catch(err => console.error("MongoDB connection error:", err));
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
