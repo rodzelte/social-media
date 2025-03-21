@@ -1,35 +1,30 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Sidebar } from "./components/sidebar/sidebar";
+import { Header } from "./components/header/header";
+import { RightPanel } from "./components/right-panel/right-panel";
+import { Routes, Route } from "react-router-dom";
+import { PostFeed } from "./components/post/post-feed";
+import { ThemeProvider } from "./components/theme-provider";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto flex gap-4 pt-16 px-4">
+          <Sidebar className="hidden md:flex w-64 fixed h-[calc(100vh-4rem)] top-16 left-0 overflow-y-auto pb-6" />
+          <main className="flex-1 md:ml-64 lg:mr-80 py-4">
+            <Routes>
+              <Route path="/" element={<PostFeed />} />
+              <Route path="/profile" element={<div>Profile Page</div>} />
+              <Route path="/messages" element={<div>Messages Page</div>} />
+              <Route path="/explore" element={<div>Explore Page</div>} />
+            </Routes>
+          </main>
+          <RightPanel className="hidden lg:flex w-80 fixed h-[calc(100vh-4rem)] top-16 right-0 overflow-y-auto pb-6" />
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </ThemeProvider>
+  );
 }
 
-export default App
+export default App;
