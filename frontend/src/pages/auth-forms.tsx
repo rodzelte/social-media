@@ -20,29 +20,176 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TermsOfService from "@/components/login/terms-of-service";
 import PrivacyPolicy from "@/components/login/privacy-policy";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
+interface LoginFormData {
+  email: string;
+  password: string;
+  remember: boolean;
+}
+
+interface RegisterFormData {
+  username: string;
+  email: string;
+  password: string;
+  terms: boolean;
+}
 
 export default function AuthForms() {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showTermsModal, setShowTermsModal] = useState<boolean>(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
+  const [loginForm, setLoginForm] = useState<LoginFormData>({
+    email: "",
+    password: "",
+    remember: false,
+  });
+  const [registerForm, setRegisterForm] = useState<RegisterFormData>({
+    username: "",
+    email: "",
+    password: "",
+    terms: false,
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!validateEmail(loginForm.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (!validatePassword(loginForm.password)) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: loginForm.email,
+          password: loginForm.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // Store token in localStorage
+      localStorage.setItem("token", data.token);
+      if (loginForm.remember) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      toast.success("Login successful!");
+      navigate("/dashboard");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Login failed");
+      toast.error(error instanceof Error ? error.message : "Login failed");
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!registerForm.terms) {
+      setError("Please accept the terms and conditions");
+      toast.error("Please accept the terms and conditions");
+      return;
+    }
+
+    if (!validateEmail(registerForm.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (!validatePassword(registerForm.password)) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
+    if (registerForm.username.length < 3) {
+      setError("Username must be at least 3 characters long");
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: registerForm.username,
+          email: registerForm.email,
+          password: registerForm.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      // Store token in localStorage
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      toast.success("Registration successful!");
+      navigate("/dashboard");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Registration failed");
+      toast.error(
+        error instanceof Error ? error.message : "Registration failed"
+      );
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
+  };
+
+  const handleLoginInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setLoginForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleRegisterInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value, type, checked } = e.target;
+    setRegisterForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   return (
@@ -62,14 +209,22 @@ export default function AuthForms() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+                  {error}
+                </div>
+              )}
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="name@example.com"
                     required
+                    value={loginForm.email}
+                    onChange={handleLoginInputChange}
                   />
                 </div>
                 <div className="space-y-2">
@@ -85,8 +240,11 @@ export default function AuthForms() {
                   <div className="relative">
                     <Input
                       id="password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       required
+                      value={loginForm.password}
+                      onChange={handleLoginInputChange}
                     />
                     <Button
                       type="button"
@@ -104,7 +262,17 @@ export default function AuthForms() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="remember" />
+                  <Checkbox
+                    id="remember"
+                    name="remember"
+                    checked={loginForm.remember}
+                    onCheckedChange={(checked) =>
+                      setLoginForm((prev) => ({
+                        ...prev,
+                        remember: checked as boolean,
+                      }))
+                    }
+                  />
                   <label
                     htmlFor="remember"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
@@ -159,28 +327,33 @@ export default function AuthForms() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First name</Label>
-                    <Input id="firstName" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last name</Label>
-                    <Input id="lastName" required />
-                  </div>
+              {error && (
+                <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+                  {error}
                 </div>
+              )}
+              <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
-                  <Input id="username" required />
+                  <Input
+                    id="username"
+                    name="username"
+                    required
+                    value={registerForm.username}
+                    onChange={handleRegisterInputChange}
+                    placeholder="Choose a username"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="registerEmail">Email</Label>
                   <Input
                     id="registerEmail"
+                    name="email"
                     type="email"
                     placeholder="name@example.com"
                     required
+                    value={registerForm.email}
+                    onChange={handleRegisterInputChange}
                   />
                 </div>
                 <div className="space-y-2">
@@ -188,8 +361,12 @@ export default function AuthForms() {
                   <div className="relative">
                     <Input
                       id="registerPassword"
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       required
+                      value={registerForm.password}
+                      onChange={handleRegisterInputChange}
+                      placeholder="At least 6 characters"
                     />
                     <Button
                       type="button"
@@ -207,7 +384,18 @@ export default function AuthForms() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="terms" required />
+                  <Checkbox
+                    id="terms"
+                    name="terms"
+                    required
+                    checked={registerForm.terms}
+                    onCheckedChange={(checked) =>
+                      setRegisterForm((prev) => ({
+                        ...prev,
+                        terms: checked as boolean,
+                      }))
+                    }
+                  />
                   <label
                     htmlFor="terms"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"

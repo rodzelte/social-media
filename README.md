@@ -1,6 +1,6 @@
 # Social Media App
 
-An interactive social media platform where users can connect, share, and engage with content in real-time. Built using the MERN stack (MongoDB, Express, React, Node.js) with TypeScript for better scalability and performance.
+An interactive social media platform where users can connect, share, and engage with content in real-time. Built using the MERN stack (MongoDB, Express, React, Node.js) with TypeScript for better scalability and performance. "TIRED"
 
 ## Features
 
